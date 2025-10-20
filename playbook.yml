@@ -1,0 +1,6 @@
+- hosts: all
+  become: true
+  vars:
+    zbx_server_ip: "xxx.xxx.xx.xx"   # << Change IP of Zabbix Server
+  roles:
+    - roles-zbx-agent2

@@ -1,0 +1,51 @@
+#!/bin/bash
+# ======================================================
+# Zabbix Agent2 Installation Script for Ubuntu 24.04
+# Version: 7.4
+# Author: MeanSC11 (converted from Ansible playbook)
+# ======================================================
+
+ZBX_SERVER_IP="{{ zbx_server_ip }}"
+ZBX_REPO_PKG="/tmp/zabbix-release_latest_7.4+ubuntu24.04_all.deb"
+ZBX_CONF="/etc/zabbix/zabbix_agent2.conf"
+
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run this script as root or using sudo"
+  exit 1
+fi
+
+echo "Starting Zabbix Agent2 installation..."
+
+echo "Downloading Zabbix repository package..."
+wget -q https://repo.zabbix.com/zabbix/7.4/release/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest_7.4+ubuntu24.04_all.deb -O "$ZBX_REPO_PKG"
+
+echo "Installing repository..."
+dpkg -i "$ZBX_REPO_PKG"
+
+echo "Updating apt package cache..."
+apt update -y
+
+echo "Installing Zabbix Agent2 and plugins..."
+DEBIAN_FRONTEND=noninteractive apt install -y \
+  zabbix-agent2 zabbix-agent2-plugin-mongodb zabbix-agent2-plugin-mssql zabbix-agent2-plugin-postgresql
+
+echo "Configuring Zabbix Agent2..."
+sed -i "s/^Server=.*/Server=${ZBX_SERVER_IP}/" "$ZBX_CONF" || true
+grep -q "^Server=" "$ZBX_CONF" || echo "Server=${ZBX_SERVER_IP}" >> "$ZBX_CONF"
+
+sed -i "s/^ServerActive=.*/ServerActive=${ZBX_SERVER_IP}/" "$ZBX_CONF" || true
+grep -q "^ServerActive=" "$ZBX_CONF" || echo "ServerActive=${ZBX_SERVER_IP}" >> "$ZBX_CONF"
+
+HOSTNAME=$(hostname)
+sed -i "s/^Hostname=.*/Hostname=${HOSTNAME}/" "$ZBX_CONF" || true
+grep -q "^Hostname=" "$ZBX_CONF" || echo "Hostname=${HOSTNAME}" >> "$ZBX_CONF"
+
+echo "Enabling and starting zabbix-agent2 service..."
+systemctl enable zabbix-agent2
+systemctl restart zabbix-agent2
+
+echo "Checking zabbix-agent2 service status..."
+systemctl status zabbix-agent2 --no-pager || true
+
+echo "Zabbix Agent2 installation and configuration completed!"
+echo "Agent2 is now connected to Zabbix Server: ${ZBX_SERVER_IP}"

@@ -1,0 +1,59 @@
+---
+- name: Ensure helper dirs exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ zbx_scripts_dir }}"
+    - /var/lib/zabbix
+
+# -----------------------------------------------------------
+# 1) Install Zabbix Agent2 with the install_zabbix_agent2.sh script.
+# -----------------------------------------------------------
+
+- name: Deploy install_zabbix_agent2.sh (templated with server IP)
+  template:
+    src: install_zabbix_agent2.sh.j2
+    dest: "{{ zbx_install_script }}"
+    mode: "0755"
+
+- name: Check if zabbix-agent2 already installed
+  stat:
+    path: "{{ zbx_agent_installed_flag }}"
+  register: agent_flag
+
+- name: Run install_zabbix_agent2.sh
+  shell: "{{ zbx_install_script }}"
+  args:
+    executable: /bin/bash
+  when: not agent_flag.stat.exists
+  register: agent_install
+  changed_when: agent_install.rc == 0
+
+- name: Create installed flag for agent2
+  file:
+    path: "{{ zbx_agent_installed_flag }}"
+    state: touch
+    mode: "0644"
+  when: not agent_flag.stat.exists
+
+# -----------------------------------------------------------
+# 2) Wait 10 seconds for systemctl to reload the service.
+# -----------------------------------------------------------
+
+- name: Wait 3 seconds before restarting agent
+  pause:
+    seconds: 3
+  when: not agent_flag.stat.exists
+
+# -----------------------------------------------------------
+# 3) Restart Zabbix Agent2 to make the service available.
+# -----------------------------------------------------------
+
+- name: Restart Zabbix Agent2 after installation
+  service:
+    name: zabbix-agent2
+    state: restarted
+    enabled: yes
+  when: not agent_flag.stat.exists

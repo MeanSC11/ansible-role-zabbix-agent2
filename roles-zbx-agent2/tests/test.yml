@@ -1,0 +1,4 @@
+- hosts: localhost
+  become: true
+  roles:
+    - zabbix-agent2-gpu

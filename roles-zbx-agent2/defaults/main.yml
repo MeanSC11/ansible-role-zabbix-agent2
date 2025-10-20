@@ -1,0 +1,11 @@
+# The default value can be overridden in a playbook or group_vars/host_vars.
+zbx_server_ip: "127.0.0.1"
+
+# Destination script path
+zbx_scripts_dir: /usr/local/sbin
+zbx_install_script: "{{ zbx_scripts_dir }}/install_zabbix_agent2.sh"
+zbx_gpu_script: "{{ zbx_scripts_dir }}/install-zbx-gpu.sh"
+
+# Status file for idempotent purposes
+zbx_agent_installed_flag: /var/lib/zabbix/.agent2_installed
+zbx_gpu_installed_flag: /var/lib/zabbix/.gpu_userparams_installed
